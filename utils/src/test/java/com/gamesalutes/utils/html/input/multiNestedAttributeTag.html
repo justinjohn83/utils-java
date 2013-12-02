@@ -1,0 +1,92 @@
+<html>
+<head>
+<script>
+function test() {
+	
+	var s = document.getElementById('breakit');
+	if(s && s != "undefined") {
+		var start = s.indexOf('<');
+		var end = s.indexOf('>',start+1);
+		if(start != -1 && end != -1) {
+			start = s.indexOf('<',start+1);
+		}
+	}
+}
+
+</script>
+</head>
+<body>
+<table>
+	<tr>
+		<td>
+			<table>
+				<tr>
+					<td>
+						<table>
+							<tr><td>column1</td><td>column2</td></tr>
+						</table>
+					</td>
+					<td>column2</td>
+				</tr>
+				<tr>
+					<td>column1</td><td>column2</td></tr>
+			</table>
+		</td>
+		<td>column2</td>
+	</tr>
+	<tr><td>column1</td><td>column2</td></tr>	
+</table>
+<div>
+	<h1>Stuff we don't care about</h1>
+	<h2>More stuff we don't care about</h2>
+	<h1>Extra stuff we don't care about</h1>
+</div>
+<!--  table width="100%" -->
+<table width="100%">
+	<tr>
+		<td>
+			<table>
+				<tr>
+					<td>
+						<table>
+							<tr><td>searchText</td><td>column2</td></tr>
+						</table>
+					</td>
+					<td>column2</td>
+				</tr>
+				<tr>
+					<td>column1</td><td>column2</td></tr>
+			</table>
+		</td>
+		<td>column2</td>
+	</tr>
+	<tr><td>column1</td><td>column2</td></tr>	
+</table>
+<table>
+	<tr>
+		<td>
+			<table>
+				<tr>
+					<td>
+						<table width="100%">
+							<tr><td>column1</td><td>searchText</td></tr>
+						</table>
+					</td>
+					<td>column2</td>
+					<td>
+					<tabletime width="100%">
+							<tr><td>column1</td><td>searchText</td></tr>
+						</table>
+					</td>
+				</tr>
+				<tr>
+					<td>column1</td><td>column2</td>
+				</tr>
+			</table>
+		</td>
+		<td>column2</td>
+	</tr>
+	<tr><td>column1</td><td>column2</td></tr>	
+</table>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <xsd:element name = "config" type = "Config"/>
+  
+  
+    <xsd:complexType name="Argument">
+    	<xsd:sequence>
+    		<xsd:element name = "value" type = "xsd:string" minOccurs="0" maxOccurs="unbounded"/>
+    	</xsd:sequence>
+    	 <xsd:attribute name = "option" type = "xsd:string" use = "optional" />
+    	 <xsd:attribute name = "value" type = "xsd:string" use = "optional" />
+    </xsd:complexType>
+    
+    <xsd:complexType name="Module">
+    <xsd:sequence>
+  		<xsd:element name = "arg" type = "Argument" minOccurs="0" maxOccurs="unbounded" />
+    </xsd:sequence>
+    <xsd:attribute name = "class" type = "xsd:string" use = "required" />
+    <xsd:attribute name = "order" type = "xsd:positiveInteger" use = "required" />
+    <xsd:attribute name = "skip" type = "xsd:boolean" use = "optional" default = "false" />
+  </xsd:complexType>
+  
+  <xsd:complexType name = "Config">
+  	<xsd:sequence>
+  		<xsd:element name = "module" type = "Module" minOccurs = "0" maxOccurs = "unbounded" />
+  	</xsd:sequence>
+  </xsd:complexType>
+
+</xsd:schema>

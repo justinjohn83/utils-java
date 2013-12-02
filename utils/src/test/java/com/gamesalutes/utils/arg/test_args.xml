@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="args.xsd">
+
+<module class="com.gamesalutes.utils.arg.ProgramArgsReaderTest$ClassA" order = "1" />
+<module class="com.gamesalutes.utils.arg.ProgramArgsReaderTest$ClassB" order = "6">
+	<!-- separates data center name from cluster name -->
+	<arg option = "dn" />
+	<arg option = "cluster_sep" value = ":"/>
+	<!--  separates data center/cluster pair from optional host import type  -->
+	<arg option = "datacenters" value = "consoles.dat"/>
+	<arg value = "data/vi_console.txt"/>
+	<arg value = "logs/vi.log" />
+</module>
+<module class = "com.gamesalutes.utils.arg.ProgramArgsReaderTest$ClassA" order = "3">
+	<arg option = "f" value = "dns_zones.dat"/>
+</module>
+<module class = "com.gamesalutes.utils.arg.ProgramArgsReaderTest$ClassC" order = "4">
+	<arg option = "O" value = "logs/hi.log"/>
+	<arg value = "data/him.csv"/>
+</module>
+<module class = "com.gamesalutes.utils.arg.ProgramArgsReaderTest$ClassC" order = "5" skip = "true">
+	<arg option = "O" value = "logs/hi.log"/>
+	<arg value = "data/him.csv"/>
+</module>
+<module class = "com.gamesalutes.utils.arg.ProgramArgsReaderTest$ClassB" order = "2">
+	<arg option = "a" value = "test 1"/>
+	<arg>
+	   <value>test</value>
+	   <value>test 2</value>
+	   <value>test3</value>
+	 </arg>
+</module>
+	
+</config>
