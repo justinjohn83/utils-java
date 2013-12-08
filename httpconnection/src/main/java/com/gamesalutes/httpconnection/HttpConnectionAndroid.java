@@ -49,6 +49,7 @@ import ch.boye.httpclientandroidlib.message.BasicNameValuePair;
 import ch.boye.httpclientandroidlib.params.CoreConnectionPNames;
 import ch.boye.httpclientandroidlib.protocol.HTTP;
 import ch.boye.httpclientandroidlib.util.EntityUtils;
+
 import com.gamesalutes.utils.ByteCountingInputStream;
 import com.gamesalutes.utils.ChainedIOException;
 import com.gamesalutes.utils.Disposable;
@@ -57,7 +58,7 @@ import com.gamesalutes.utils.EncryptUtils.TransportSecurityProtocol;
 import com.gamesalutes.utils.MiscUtils;
 import com.gamesalutes.utils.WebUtils;
 
-public final class HttpConnectionAndroid implements Disposable
+public final class HttpConnectionAndroid implements Disposable,HttpSupport
 {
 //    public static class Params
 //    {
