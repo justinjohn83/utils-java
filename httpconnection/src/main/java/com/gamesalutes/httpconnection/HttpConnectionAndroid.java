@@ -145,6 +145,27 @@ public final class HttpConnectionAndroid implements Disposable,HttpSupport
 		}
     	
     }
+    
+    /**
+     * Constructor.
+     * 
+     * No base path set.  All uris must be absolute.
+     * 
+     */
+    public HttpConnectionAndroid() {
+    	this(null,3,DEFAULT_TIMEOUT);
+    }
+    /**
+     * Constructor.
+     * 
+     * No base path set.  All uris must be absolute.
+     * 
+     * @param numRetries
+     * @param timeout
+     */
+    public HttpConnectionAndroid(int numRetries,int timeout) {
+    	this(null,numRetries,null,null,timeout);
+    }
     /**
      *
      * Constructor.
@@ -183,25 +204,28 @@ public final class HttpConnectionAndroid implements Disposable,HttpSupport
      */
     public HttpConnectionAndroid(String path,int numRetries,String certFile,String keyFile,int timeout)
     {
-        URI u;
-        try
-        {
-            u = new URI(path);
-        }
-        catch(URISyntaxException e)
-        {
-            throw new IllegalArgumentException("path=" + path);
-        }
-
+    	if(path != null) {
+	        URI u;
+	        try
+	        {
+	            u = new URI(path);
+	        }
+	        catch(URISyntaxException e)
+	        {
+	            throw new IllegalArgumentException("path=" + path);
+	        }
+	
+	        this.protocol = u.getScheme();
+	        this.server = u.getHost();
+	        if(u.getPort() != -1)
+	            this.port = u.getPort();
+	        else if("https".equalsIgnoreCase(u.getScheme()))
+	            this.port = 443;
+	        else
+	            this.port = 80;
+    	}
         this.timeout = timeout;
-        this.protocol = u.getScheme();
-        this.server = u.getHost();
-        if(u.getPort() != -1)
-            this.port = u.getPort();
-        else if("https".equalsIgnoreCase(u.getScheme()))
-            this.port = 443;
-        else
-            this.port = 80;
+
 
         this.certFile = certFile;
         this.keyFile = keyFile;
@@ -439,6 +463,10 @@ public final class HttpConnectionAndroid implements Disposable,HttpSupport
     			throw new RuntimeException(e);
     		}
     	}
+    	// no base url specified so if uri is not absolute we cannot determine the url
+    	else if(this.server == null) {
+    		throw new IllegalStateException("Uri not absolute when no base path set: path=" + path + ";queryParams=" + queryParams );
+    	}
     	Matcher m = HOST_PATTERN.matcher(path);
     	if(m.find())
     	{
@@ -590,7 +618,7 @@ public final class HttpConnectionAndroid implements Disposable,HttpSupport
 //            	httpClient.log.enableDebug(true);
 //            }
 
-            if(this.protocol.equalsIgnoreCase("https"))
+            if("https".equalsIgnoreCase(this.protocol))
             {
                 
                      X509Certificate[] certs = null;
