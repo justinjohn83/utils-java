@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -34,14 +35,19 @@ import ch.boye.httpclientandroidlib.NameValuePair;
 import ch.boye.httpclientandroidlib.StatusLine;
 import ch.boye.httpclientandroidlib.client.HttpClient;
 import ch.boye.httpclientandroidlib.client.entity.UrlEncodedFormEntity;
+import ch.boye.httpclientandroidlib.client.methods.HttpDelete;
+import ch.boye.httpclientandroidlib.client.methods.HttpEntityEnclosingRequestBase;
 import ch.boye.httpclientandroidlib.client.methods.HttpGet;
 import ch.boye.httpclientandroidlib.client.methods.HttpPost;
+import ch.boye.httpclientandroidlib.client.methods.HttpPut;
 import ch.boye.httpclientandroidlib.client.methods.HttpRequestBase;
 import ch.boye.httpclientandroidlib.client.utils.URIUtils;
 import ch.boye.httpclientandroidlib.client.utils.URLEncodedUtils;
 import ch.boye.httpclientandroidlib.conn.params.ConnRoutePNames;
 import ch.boye.httpclientandroidlib.conn.scheme.Scheme;
 import ch.boye.httpclientandroidlib.conn.ssl.SSLSocketFactory;
+import ch.boye.httpclientandroidlib.entity.ContentProducer;
+import ch.boye.httpclientandroidlib.entity.EntityTemplate;
 import ch.boye.httpclientandroidlib.impl.client.DefaultHttpClient;
 import ch.boye.httpclientandroidlib.impl.conn.PoolingClientConnectionManager;
 import ch.boye.httpclientandroidlib.message.BasicHeader;
@@ -663,5 +669,108 @@ public final class HttpConnectionAndroid implements Disposable,HttpSupport
     public void resetTotalBytes() {
     	totalBytes.set(0);
     }
+    
+	public <T> T get(HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException {
+		URI uri = createUri(request.getPath(),request.getQueryParameters());
+        HttpGet http = new HttpGet(uri);
+        
+        return action(uri,http,request);
+        
+	}
+	public <T> T post(HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException {
+		URI uri = createUri(request.getPath(),request.getQueryParameters());
+		HttpPost http = new HttpPost(uri);
+        
+        return action(uri,http,request);
+	}
+	public <T> T put(HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException {
+		URI uri = createUri(request.getPath(),request.getQueryParameters());
+		HttpPut http = new HttpPut(uri);
+        
+        return action(uri,http,request);
+	}
+	public <T> T delete(HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException {
+		URI uri = createUri(request.getPath(),request.getQueryParameters());
+		HttpDelete http = new HttpDelete(uri);
+        
+        return action(uri,http,request);
+	}
+	
+	private <T> T action(URI uri,HttpRequestBase method,HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException {
+        setHeaders(method,request.getHeaders());
+        // marshall request
+        if(method instanceof HttpEntityEnclosingRequestBase) {
+        	marshallRequest((HttpEntityEnclosingRequestBase)method,request.getMarshaller());
+        }
+        
+        HttpResponse response = getResponse(uri,method);
+        // unmarshaller
+        handleExceptions(response);
+        
+        return unmarshallResponse(response,request.getUnmarshaller());
+        
+	}
+	
+	private void marshallRequest(HttpEntityEnclosingRequestBase method,final RequestMarshaller marshaller) {
+		method.setEntity(new EntityTemplate(new ContentProducer() {
+
+			public void writeTo(OutputStream out) throws IOException {
+				if(logger.isDebugEnabled()) {
+					logger.debug("Marshalling entity content: " + marshaller);
+				}
+				marshaller.marshall(out);
+			}
+			
+		}));
+				
+	}
+	
+	private void handleExceptions(HttpResponse response) throws IOException,HttpBadStatusException {
+		if(response == null) {
+			throw new IOException("No Response");
+		}
+		
+		final int code = response.getCode();
+		
+		if(logger.isDebugEnabled()) {
+			logger.debug("Response code=" + code);
+		}
+		
+		if(code >= 200 && code < 300) {
+			return;
+		}
+		if(code == 400) {
+			throw new BadRequestException(response.getStatus());
+		}
+		if(code == 403) {
+			throw new NotAuthorizedException(response.getStatus());
+		}
+		if(code == 405) {
+			throw new MethodNotSupportedException(response.getStatus());
+		}
+		if(code == 409) {
+			throw new ConflictException(response.getStatus());
+		}
+		if(code == 404) {
+			throw new NotFoundException(response.getStatus());
+		}
+		if(code >= 500 && code < 600) {
+			throw new ServerHttpException(code,response.getStatus());
+		}
+		
+		// generic error
+		throw new HttpBadStatusException(code,response.getStatus());
+	}
+	private <T> T unmarshallResponse(HttpResponse response,ResponseUnmarshaller<T> unmarshaller) throws IOException {
+		if(logger.isDebugEnabled()) {
+			logger.debug("Unmarshalling entity response using: " + unmarshaller);
+		}
+		try {
+			return unmarshaller.unmarshall(response.getInputStream());
+		}
+		finally {
+			MiscUtils.closeStream(response.getInputStream());
+		}
+	}
 
 }

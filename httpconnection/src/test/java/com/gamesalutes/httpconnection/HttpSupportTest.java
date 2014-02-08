@@ -25,7 +25,7 @@ public abstract class HttpSupportTest {
 	}
 	
 	@Test
-	public void testNonGzippedConnection() throws Exception {
+	public void testNonGzippedConnectionDeprecatedGet() throws Exception {
 		HttpSupport conn = createConnection("http://www.google.com");
 		HttpResponse response = conn.get("/", null, null);
 		
@@ -37,19 +37,31 @@ public abstract class HttpSupportTest {
 	}
 	
 	@Test
+	public void testNonGzippedConnectionGet() throws Exception {
+		HttpSupport conn = createConnection("http://www.google.com");
+		String response = conn.get( 
+				new RequestBuilder<String>().setUnmarshaller(new StringResponseUnmarshaller()).build());
+		
+		assertNotNull(response);
+		
+		//logger.info("Total Bytes=" + conn.getTotalBytes());
+
+	}
+	
+	@Test
 	public void testNoBaseUrl() throws Exception{
 		HttpSupport conn = createConnection(null);
 		
-		HttpResponse response = conn.get("http://www.google.com", null, null);
+		String response = conn.get(
+				new RequestBuilder<String>().setPath("http://www.google.com").setUnmarshaller(new StringResponseUnmarshaller()).build());
 		
 		assertNotNull(response);
-		assertNotNull(response.getContent());
 		
 		// test second url
-		response = conn.get("http://www.bestbuy.com", null, null);
-		
+		response = conn.get(
+						new RequestBuilder<String>().setPath("http://www.bestbuy.com").setUnmarshaller(new StringResponseUnmarshaller()).build());
+						
 		assertNotNull(response);
-		assertNotNull(response.getContent());
 	}
 	
 	// FIXME: http://www.facebook.com throws an SSL peer not authenticated!
@@ -59,10 +71,12 @@ public abstract class HttpSupportTest {
 		// bestbuy supports gzipped responses:
 		// http://www.whatsmyip.org/http-compression-test/
 		HttpSupport conn = createConnection("http://www.bestbuy.com");
-		HttpResponse response = conn.get("/", null, null);
+		
+		String response = conn.get(
+				new RequestBuilder<String>().setPath("/").setUnmarshaller(new StringResponseUnmarshaller()).build());
+		
 		
 		assertNotNull(response);
-		assertNotNull(response.getContent());
 		
 		//logger.info("Total Bytes=" + conn.getTotalBytes());
 		
@@ -98,10 +112,11 @@ public abstract class HttpSupportTest {
 					
 					try {
 					
-						HttpResponse response = conn.get("/", null, null);
+						String response = conn.get(
+										new RequestBuilder<String>().setUnmarshaller(new StringResponseUnmarshaller()).build());
+										
 						
 						assertNotNull(response);
-						assertNotNull(response.getContent());
 						// create the lock
 						//fileLock.lock();
 						
