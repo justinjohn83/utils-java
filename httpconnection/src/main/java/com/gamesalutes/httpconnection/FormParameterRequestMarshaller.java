@@ -12,7 +12,7 @@ import com.gamesalutes.utils.MiscUtils;
  * @author jmontgomery
  *
  */
-public abstract class FormParameterRequestMarshaller implements RequestMarshaller {
+public abstract class FormParameterRequestMarshaller implements RequestMarshaller<Map<String,String>> {
 
 	protected final Map<String,String> formParameters = new HashMap<String,String>();
 	
@@ -49,6 +49,11 @@ public abstract class FormParameterRequestMarshaller implements RequestMarshalle
 		builder.append(formParameters);
 		builder.append("]");
 		return builder.toString();
+	}
+	
+
+	public String getContentType() {
+		return "text/plain";
 	}
 	
 	

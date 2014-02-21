@@ -670,37 +670,37 @@ public final class HttpConnectionAndroid implements Disposable,HttpSupport
     	totalBytes.set(0);
     }
     
-	public <T> T get(HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException {
+	public <S,T> T get(HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException {
 		URI uri = createUri(request.getPath(),request.getQueryParameters());
         HttpGet http = new HttpGet(uri);
         
         return action(uri,http,request);
         
 	}
-	public <T> T post(HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException {
+	public <S,T> T post(HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException {
 		URI uri = createUri(request.getPath(),request.getQueryParameters());
 		HttpPost http = new HttpPost(uri);
         
         return action(uri,http,request);
 	}
-	public <T> T put(HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException {
+	public <S,T> T put(HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException {
 		URI uri = createUri(request.getPath(),request.getQueryParameters());
 		HttpPut http = new HttpPut(uri);
         
         return action(uri,http,request);
 	}
-	public <T> T delete(HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException {
+	public <S,T> T delete(HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException {
 		URI uri = createUri(request.getPath(),request.getQueryParameters());
 		HttpDelete http = new HttpDelete(uri);
         
         return action(uri,http,request);
 	}
 	
-	private <T> T action(URI uri,HttpRequestBase method,HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException {
+	private <S,T> T action(URI uri,HttpRequestBase method,HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException {
         setHeaders(method,request.getHeaders());
         // marshall request
         if(method instanceof HttpEntityEnclosingRequestBase) {
-        	marshallRequest((HttpEntityEnclosingRequestBase)method,request.getMarshaller());
+        	marshallRequest((HttpEntityEnclosingRequestBase)method,request.getMarshaller(),request.getRequest());
         }
         
         HttpResponse response = getResponse(uri,method);
@@ -711,17 +711,19 @@ public final class HttpConnectionAndroid implements Disposable,HttpSupport
         
 	}
 	
-	private void marshallRequest(HttpEntityEnclosingRequestBase method,final RequestMarshaller marshaller) {
-		method.setEntity(new EntityTemplate(new ContentProducer() {
+	private <S> void  marshallRequest(HttpEntityEnclosingRequestBase method,final RequestMarshaller<S> marshaller,final S request) {
+		EntityTemplate template = new EntityTemplate(new ContentProducer() {
 
 			public void writeTo(OutputStream out) throws IOException {
 				if(logger.isDebugEnabled()) {
 					logger.debug("Marshalling entity content: " + marshaller);
 				}
-				marshaller.marshall(out);
+				marshaller.marshall(request,out);
 			}
 			
-		}));
+		});
+		template.setContentType(new BasicHeader(HTTP.CONTENT_TYPE,marshaller.getContentType()));
+		method.setEntity(template);
 				
 	}
 	

@@ -40,7 +40,7 @@ public abstract class HttpSupportTest {
 	public void testNonGzippedConnectionGet() throws Exception {
 		HttpSupport conn = createConnection("http://www.google.com");
 		String response = conn.get( 
-				new RequestBuilder<String>().setUnmarshaller(new StringResponseUnmarshaller()).build());
+				new RequestBuilder<Void,String>().setUnmarshaller(new StringResponseUnmarshaller()).build());
 		
 		assertNotNull(response);
 		
@@ -53,13 +53,13 @@ public abstract class HttpSupportTest {
 		HttpSupport conn = createConnection(null);
 		
 		String response = conn.get(
-				new RequestBuilder<String>().setPath("http://www.google.com").setUnmarshaller(new StringResponseUnmarshaller()).build());
+				new RequestBuilder<Void,String>().setPath("http://www.google.com").setUnmarshaller(new StringResponseUnmarshaller()).build());
 		
 		assertNotNull(response);
 		
 		// test second url
 		response = conn.get(
-						new RequestBuilder<String>().setPath("http://www.bestbuy.com").setUnmarshaller(new StringResponseUnmarshaller()).build());
+						new RequestBuilder<Void,String>().setPath("http://www.bestbuy.com").setUnmarshaller(new StringResponseUnmarshaller()).build());
 						
 		assertNotNull(response);
 	}
@@ -73,7 +73,7 @@ public abstract class HttpSupportTest {
 		HttpSupport conn = createConnection("http://www.bestbuy.com");
 		
 		String response = conn.get(
-				new RequestBuilder<String>().setPath("/").setUnmarshaller(new StringResponseUnmarshaller()).build());
+				new RequestBuilder<Void,String>().setPath("/").setUnmarshaller(new StringResponseUnmarshaller()).build());
 		
 		
 		assertNotNull(response);
@@ -113,7 +113,7 @@ public abstract class HttpSupportTest {
 					try {
 					
 						String response = conn.get(
-										new RequestBuilder<String>().setUnmarshaller(new StringResponseUnmarshaller()).build());
+										new RequestBuilder<Void,String>().setUnmarshaller(new StringResponseUnmarshaller()).build());
 										
 						
 						assertNotNull(response);

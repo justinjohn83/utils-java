@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,9 +18,20 @@ import com.gamesalutes.utils.MiscUtils;
 public final class HttpFormParameterRequestMarshaller extends
 		FormParameterRequestMarshaller {
 
-	public void marshall(OutputStream out) throws IOException {
-        if(MiscUtils.isEmpty(this.formParameters))
+	public void marshall(Map<String,String> parameters,OutputStream out) throws IOException {
+		if(MiscUtils.isEmpty(this.formParameters) && MiscUtils.isEmpty(parameters))
             return;
+		if(MiscUtils.isEmpty(parameters)) {
+			parameters = this.formParameters;
+		}
+		else if(!MiscUtils.isEmpty(this.formParameters)){
+			parameters = new HashMap<String,String>(parameters);
+			for(Map.Entry<String, String> E : this.formParameters.entrySet()) {
+				if(!parameters.containsKey(E.getKey())) {
+					parameters.put(E.getKey(), E.getValue());
+				}
+			}
+		}
 
 
         List<NameValuePair> nvps = new ArrayList<NameValuePair>(this.formParameters.size());

@@ -34,9 +34,9 @@ public interface HttpSupport {
 	@Deprecated
     HttpResponse post(String path,Map<String,String> headers,Map<String,String> queryParams,Map<String,String> formParams) throws IOException;
     
-    <T> T get(HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException;
-    <T> T post(HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException;
-    <T> T put(HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException;
-    <T> T delete(HttpConnectionRequest<T> request) throws IOException,HttpBadStatusException;
+    <S,T> T get(HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException;
+    <S,T> T post(HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException;
+    <S,T> T put(HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException;
+    <S,T> T delete(HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException;
     
 }

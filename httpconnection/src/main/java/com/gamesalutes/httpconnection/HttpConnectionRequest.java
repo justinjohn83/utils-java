@@ -3,7 +3,7 @@ package com.gamesalutes.httpconnection;
 import java.util.HashMap;
 import java.util.Map;
 
-public final class HttpConnectionRequest<T> {
+public final class HttpConnectionRequest<S,T> {
 
 	
 	private final String path;
@@ -11,22 +11,26 @@ public final class HttpConnectionRequest<T> {
 	private final Map<String,String> headers;
 	private final Map<String,String> queryParameters;
 	
-	private final RequestMarshaller marshaller;
+	private final RequestMarshaller<S> marshaller;
 	
 	
 	private final ResponseUnmarshaller<T> unmarshaller;
+	
+	private final S request;
 	
 	HttpConnectionRequest(
 			String path,
 			Map<String,String> headers,
 			Map<String,String> queryParameters,
-			RequestMarshaller marshaller,
-			ResponseUnmarshaller<T> unmarshaller) {
+			RequestMarshaller<S> marshaller,
+			ResponseUnmarshaller<T> unmarshaller,
+			S request) {
 		this.path = path;
 		this.headers = copyMap(headers);
 		this.queryParameters = copyMap(queryParameters);
 		this.marshaller = marshaller;
 		this.unmarshaller = unmarshaller;
+		this.request = request;
 	}
 	
 	private Map<String,String> copyMap(Map<String,String> m) {
@@ -45,7 +49,7 @@ public final class HttpConnectionRequest<T> {
 		return queryParameters;
 	}
 
-	public RequestMarshaller getMarshaller() {
+	public RequestMarshaller<S> getMarshaller() {
 		return marshaller;
 	}
 
@@ -62,6 +66,12 @@ public final class HttpConnectionRequest<T> {
 		builder.append(headers);
 		builder.append(", queryParameters=");
 		builder.append(queryParameters);
+		builder.append(", marshaller=");
+		builder.append(marshaller);
+		builder.append(", unmarshaller=");
+		builder.append(unmarshaller);
+		builder.append(", request=");
+		builder.append(request);
 		builder.append("]");
 		return builder.toString();
 	}
@@ -85,7 +95,7 @@ public final class HttpConnectionRequest<T> {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		HttpConnectionRequest other = (HttpConnectionRequest) obj;
+		HttpConnectionRequest<S,T> other = (HttpConnectionRequest<S,T>) obj;
 		if (headers == null) {
 			if (other.headers != null)
 				return false;
@@ -102,6 +112,10 @@ public final class HttpConnectionRequest<T> {
 		} else if (!queryParameters.equals(other.queryParameters))
 			return false;
 		return true;
+	}
+
+	public S getRequest() {
+		return request;
 	}
 			
 }
