@@ -1,5 +1,7 @@
 package com.gamesalutes.httpconnection;
 
+import java.net.URI;
+
 
 
 public class HttpConnectionAndroidTest extends HttpSupportTest{
@@ -8,10 +10,15 @@ public class HttpConnectionAndroidTest extends HttpSupportTest{
 	protected HttpSupport createConnection(String url, int numRetries,
 			int timeout) {
 		if(url == null) {
-			return new HttpConnection(numRetries,timeout);
+			return new HttpConnectionAndroid(numRetries,timeout);
 		}
 		else {
-			return new HttpConnection(url,numRetries,timeout);
+			return new HttpConnectionAndroid(url,numRetries,timeout);
 		}
+	}
+
+	@Override
+	protected URI createUri(HttpSupport conn,HttpConnectionRequest<?,?> request) {
+		return ((HttpConnectionAndroid)conn).createUri(request.getPath(), request.getQueryParameters());
 	}
 }

@@ -1,5 +1,7 @@
 package com.gamesalutes.httpconnection;
 
+import java.net.URI;
+
 public class HttpConnectionTest extends HttpSupportTest {
 
 	@Override
@@ -11,6 +13,11 @@ public class HttpConnectionTest extends HttpSupportTest {
 		else {
 			return new HttpConnection(url,numRetries,timeout);
 		}
+	}
+
+	@Override
+	protected URI createUri(HttpSupport conn,HttpConnectionRequest<?,?> request) {
+		return ((HttpConnection)conn).createUri(request.getPath(), request.getQueryParameters());
 	}
 
 }

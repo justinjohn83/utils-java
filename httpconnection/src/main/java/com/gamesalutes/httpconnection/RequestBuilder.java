@@ -52,14 +52,26 @@ public class RequestBuilder<S,T> {
 		return this;
 	}
 	
-	public RequestBuilder<S,T> addHeader(String key,Object value) {
-		this.headers.put(key, value != null ? value.toString() : "");
+	public RequestBuilder<S,T> addHeader(String key,Object value,boolean addEmptyIfNull) {
+		if(value != null || addEmptyIfNull) {
+			this.headers.put(key, value != null ? value.toString() : "");
+		}
 		return this;
 	}
 	
-	public RequestBuilder<S,T> addQueryParameter(String key,Object value) {
-		this.queryParameters.put(key,value != null ? value.toString() : "");
+	public RequestBuilder<S,T> addQueryParameter(String key,Object value,boolean addEmptyIfNull) {
+		if(value != null || addEmptyIfNull) {
+			this.queryParameters.put(key,value != null ? value.toString() : "");
+		}
 		return this;
+	}
+	
+	public RequestBuilder<S,T> addHeader(String key,Object value) {
+		return addHeader(key,value,true);
+	}
+	
+	public RequestBuilder<S,T> addQueryParameter(String key,Object value) {
+		return addQueryParameter(key,value,true);
 	}
 
 	public RequestBuilder<S,T> setRequest(S requestObject) {

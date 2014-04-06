@@ -1,7 +1,9 @@
 package com.gamesalutes.httpconnection;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.net.URI;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -41,6 +43,65 @@ public abstract class HttpSupportTest {
 		HttpSupport conn = createConnection("http://www.google.com");
 		String response = conn.get( 
 				new RequestBuilder<Void,String>().setUnmarshaller(new StringResponseUnmarshaller()).build());
+		
+		assertNotNull(response);
+		
+		//logger.info("Total Bytes=" + conn.getTotalBytes());
+
+	}
+	
+	
+	protected abstract URI createUri(HttpSupport conn,HttpConnectionRequest<?,?> request);
+	
+	@Test
+	public void createUriTest() throws Exception {
+		
+		HttpSupport conn = createConnection("http://www.google.com");
+		
+		URI expected = new URI("http://www.google.com:80/?q=bestbuy");
+		expected = new URI("http://www.google.com/?q=bestbuy");
+		
+		HttpConnectionRequest<Void,String> request = new RequestBuilder<Void,String>(
+				).setUnmarshaller(new StringResponseUnmarshaller()
+				).addQueryParameter("q", "bestbuy").build();
+		assertEquals("bestbuy",request.getQueryParameters().get("q"));
+		
+		request = new RequestBuilder<Void,String>(
+				).setUnmarshaller(new StringResponseUnmarshaller()
+				).setPath("http://www.google.com"
+				).addQueryParameter("q", "bestbuy").build();
+		assertEquals("bestbuy",request.getQueryParameters().get("q"));
+		
+		expected = new URI("http://www.google.com/?q=bestbuy");
+		request = new RequestBuilder<Void,String>(
+				).setUnmarshaller(new StringResponseUnmarshaller()
+				).setPath("www.google.com"
+				).addQueryParameter("q", "bestbuy").build();
+		assertEquals("bestbuy",request.getQueryParameters().get("q"));
+		
+		expected = new URI("http://www.google.com:80/?q=bestbuy");
+		request = new RequestBuilder<Void,String>(
+				).setUnmarshaller(new StringResponseUnmarshaller()
+				).setPath("localhost:8080"
+				).addQueryParameter("q", "bestbuy").build();
+		assertEquals("bestbuy",request.getQueryParameters().get("q"));
+		
+		
+		
+		assertEquals(expected,createUri(conn,request));
+	}
+	@Test
+	public void testNonGzippedConnectionGetWithParameters() throws Exception {
+		//https://www.google.com/#q=bestbuy
+		HttpSupport conn = createConnection("http://www.google.com");
+		
+		URI expected = new URI("http://www.google.com:80/?q=bestbuy");
+		HttpConnectionRequest<Void,String> request = new RequestBuilder<Void,String>(
+				).setUnmarshaller(new StringResponseUnmarshaller()
+				).addQueryParameter("q", "bestbuy").build();
+		assertEquals("bestbuy",request.getQueryParameters().get("q"));
+		
+		String response = conn.get(request);
 		
 		assertNotNull(response);
 		

@@ -12,6 +12,7 @@ import java.net.URISyntaxException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -453,7 +454,7 @@ public final class HttpConnection implements Disposable,HttpSupport
     }
 
     private static final Pattern HOST_PATTERN = Pattern.compile(
-    		"(\\.edu)|(\\.com)|(\\.net)");
+    		"((localhost)|(\\.edu)|(\\.com)|(\\.net))(:\\d+)?");
     
     public URI createUri(String path,Map<String,String> queryParams)
     {
@@ -462,9 +463,10 @@ public final class HttpConnection implements Disposable,HttpSupport
     		throw new IllegalArgumentException("path=" + path);
     	}
     	
+    	URI currentUri = null;
     	if(path.startsWith("http")) {
     		try {
-    			return new URI(path);
+    			currentUri = new URI(path);
     		}
     		catch(URISyntaxException e) {
     			throw new RuntimeException(e);
@@ -474,32 +476,61 @@ public final class HttpConnection implements Disposable,HttpSupport
     	else if(this.server == null) {
     		throw new IllegalStateException("Uri not absolute when no base path set: path=" + path + ";queryParams=" + queryParams );
     	}
-    	Matcher m = HOST_PATTERN.matcher(path);
-    	if(m.find())
-    	{
-    		int index = m.end();
-    		if(index < path.length() - 1)
-    		{
-    			path = path.substring(index);
-    		}
-    	}
-    	//path regex
-    	int slashIndex = path.indexOf('/');
-//    	if(slashIndex != -1 && slashIndex < path.length() - 1)
-//    	{
-//    		path = path.substring(slashIndex+1);
-//    	}
-//    	else
-    	if(slashIndex == -1)
-    	{
-    		path = "/" + path;
+    	
+    	if(currentUri == null) {
+	    	Matcher m = HOST_PATTERN.matcher(path);
+	    	if(m.find())
+	    	{
+	    		int index = m.end();
+	    		if(index < path.length() - 1)
+	    		{
+	    			path = path.substring(index);
+	    		}
+	    		else {
+	    			path = "";
+	    		}
+	    	}
+	    	//path regex
+	    	int slashIndex = path.indexOf('/');
+	//    	if(slashIndex != -1 && slashIndex < path.length() - 1)
+	//    	{
+	//    		path = path.substring(slashIndex+1);
+	//    	}
+	//    	else
+	    	if(slashIndex == -1)
+	    	{
+	    		path = "/" + path;
+	    	}
+	    	try {
+	    		currentUri = URIUtils.createURI(this.protocol,this.server,this.port,path,null,null);
+	    	}
+	    	catch(URISyntaxException e)
+	        {
+	            throw new IllegalArgumentException("path=" + path);
+	        }
+	    	
+	    	// check if query parameters already exist and merge them
+	    	if(!MiscUtils.isEmpty(queryParams)) {
+	    		Map<String,String> existingQueryParameters = WebUtils.getQueryParameters(currentUri);
+	    		if(!MiscUtils.isEmpty(existingQueryParameters)) {
+	    			Map<String,String> newQueryParameters = new LinkedHashMap<String,String>(existingQueryParameters);
+	    			newQueryParameters.putAll(queryParams);
+	    			queryParams = newQueryParameters;
+	    		}
+	    	}
     	}
 
         // encode the query params
         String query = encodeParams(queryParams);
         try
         {
-            return URIUtils.createURI(this.protocol,this.server,this.port,path,query,null);
+            return URIUtils.createURI(
+            		currentUri.getScheme(),
+            		currentUri.getHost(),
+            		currentUri.getPort(),
+            		currentUri.getPath(),
+            		query,
+            		null);
         }
         catch(URISyntaxException e)
         {
