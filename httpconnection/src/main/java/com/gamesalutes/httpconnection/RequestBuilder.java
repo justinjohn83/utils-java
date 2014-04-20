@@ -20,6 +20,9 @@ public class RequestBuilder<S,T> {
 	
 	private ResponseUnmarshaller<T> unmarshaller;
 	
+	@SuppressWarnings("rawtypes")
+	private ResponseUnmarshaller errorUnmarshaller = new NullResponseMarshaller();
+	
 	private S requestObject;
 	
 	@SuppressWarnings("unchecked")
@@ -34,6 +37,7 @@ public class RequestBuilder<S,T> {
 				this.queryParameters,
 				this.marshaller,
 				this.unmarshaller,
+				this.errorUnmarshaller,
 				this.requestObject);
 	}
 	
@@ -51,6 +55,17 @@ public class RequestBuilder<S,T> {
 		this.unmarshaller = unmarshaller;
 		return this;
 	}
+	/**
+	 * Sets unmarshaller to use in case of a non-success http status code.
+	 * 
+	 * @param unmarshaller the <code>ResponseUnmarshaller</code>
+	 * @return <code>this</code> for chaining
+	 */
+	public RequestBuilder<S,T> setHttpErrorUnmarshaller(ResponseUnmarshaller<?> unmarshaller) {
+		this.errorUnmarshaller = unmarshaller;
+		return this;
+	}
+	
 	
 	public RequestBuilder<S,T> addHeader(String key,Object value,boolean addEmptyIfNull) {
 		if(value != null || addEmptyIfNull) {

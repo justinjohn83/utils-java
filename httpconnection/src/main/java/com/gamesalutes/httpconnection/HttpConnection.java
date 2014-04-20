@@ -53,18 +53,15 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.gamesalutes.utils.ByteCountingInputStream;
 import com.gamesalutes.utils.ChainedIOException;
-import com.gamesalutes.utils.Disposable;
 import com.gamesalutes.utils.EncryptUtils;
 import com.gamesalutes.utils.EncryptUtils.TransportSecurityProtocol;
 import com.gamesalutes.utils.MiscUtils;
 import com.gamesalutes.utils.WebUtils;
 
-public final class HttpConnection implements Disposable,HttpSupport
+public final class HttpConnection extends AbstractHttpConnection
 {
 //    public static class Params
 //    {
@@ -90,8 +87,6 @@ public final class HttpConnection implements Disposable,HttpSupport
     private AtomicInteger openConnections = new AtomicInteger();
 
     private int timeout;
-
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public static final int DEFAULT_TIMEOUT = 60 * 1000;
 
@@ -211,9 +206,8 @@ public final class HttpConnection implements Disposable,HttpSupport
      */
     public HttpConnection(String path,int numRetries,String certFile,String keyFile,int timeout)
     {
-        URI u;
-        
         if(path != null) {
+            URI u;
 	        try
 	        {
 	            u = new URI(path);
@@ -382,7 +376,7 @@ public final class HttpConnection implements Disposable,HttpSupport
 		           if(open > 0) {
 		        	   open = openConnections.decrementAndGet();
 		           }
-		           logger.warn("Unable to retrive content (" + code + " : " + status + ") : " + uri,e);
+		           logger.warn("Unable to retreive content (" + code + " : " + status + ") : " + uri,e);
 	        	   logger.warn("Unable to connect to uri=" + uri,e);
 	        	   try {
 	        		   method.releaseConnection();
@@ -741,14 +735,17 @@ public final class HttpConnection implements Disposable,HttpSupport
         }
         
         HttpResponse response = getResponse(uri,method);
-        // unmarshaller
-        handleExceptions(response);
+        handleExceptions(response,request.getErrorUnmarshaller());
         
+        // unmarshaller
         return unmarshallResponse(response,request.getUnmarshaller());
         
 	}
 	
 	private <S> void  marshallRequest(HttpEntityEnclosingRequestBase method,final RequestMarshaller<S> marshaller,final S request) {
+		if(marshaller == null) {
+			throw new IllegalArgumentException("No marshaller configured for entity enclosing request");
+		}
 		EntityTemplate template = new EntityTemplate(new ContentProducer() {
 
 			public void writeTo(OutputStream out) throws IOException {
@@ -762,54 +759,6 @@ public final class HttpConnection implements Disposable,HttpSupport
 		template.setContentType(new BasicHeader(HTTP.CONTENT_TYPE,marshaller.getContentType()));
 		method.setEntity(template);
 				
-	}
-	
-	private void handleExceptions(HttpResponse response) throws IOException,HttpBadStatusException {
-		if(response == null) {
-			throw new IOException("No Response");
-		}
-		
-		final int code = response.getCode();
-		
-		if(logger.isDebugEnabled()) {
-			logger.debug("Response code=" + code);
-		}
-		
-		if(code >= 200 && code < 300) {
-			return;
-		}
-		if(code == 400) {
-			throw new BadRequestException(response.getStatus());
-		}
-		if(code == 403) {
-			throw new NotAuthorizedException(response.getStatus());
-		}
-		if(code == 405) {
-			throw new MethodNotSupportedException(response.getStatus());
-		}
-		if(code == 409) {
-			throw new ConflictException(response.getStatus());
-		}
-		if(code == 404) {
-			throw new NotFoundException(response.getStatus());
-		}
-		if(code >= 500 && code < 600) {
-			throw new ServerHttpException(code,response.getStatus());
-		}
-		
-		// generic error
-		throw new HttpBadStatusException(code,response.getStatus());
-	}
-	private <T> T unmarshallResponse(HttpResponse response,ResponseUnmarshaller<T> unmarshaller) throws IOException {
-		if(logger.isDebugEnabled()) {
-			logger.debug("Unmarshalling entity response using: " + unmarshaller);
-		}
-		try {
-			return unmarshaller.unmarshall(response.getInputStream());
-		}
-		finally {
-			MiscUtils.closeStream(response.getInputStream());
-		}
 	}
 
 }

@@ -8,6 +8,8 @@ public class HttpBadStatusException extends Exception {
 	private static final long serialVersionUID = 1L;
 	
 	private final int statusCode;
+	
+	private Object exceptionResponse;
 
 	public HttpBadStatusException(int statusCode) {
 		this.statusCode = statusCode;
@@ -30,6 +32,19 @@ public class HttpBadStatusException extends Exception {
 	
 	public final int getStatusCode() {
 		return statusCode;
+	}
+
+	public Object getExceptionResponse() {
+		return exceptionResponse;
+	}
+
+	public void setExceptionResponse(Object exceptionResponse) {
+		this.exceptionResponse = exceptionResponse;
+	}
+
+	@Override
+	public String toString() {
+		return "statusCode=" + statusCode + ";exceptionResponse=" + exceptionResponse;
 	}
 
 }

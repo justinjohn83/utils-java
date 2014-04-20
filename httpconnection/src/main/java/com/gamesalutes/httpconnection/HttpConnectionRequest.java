@@ -15,6 +15,7 @@ public final class HttpConnectionRequest<S,T> {
 	
 	
 	private final ResponseUnmarshaller<T> unmarshaller;
+	private final ResponseUnmarshaller<?> errorUnmarshaller;
 	
 	private final S request;
 	
@@ -24,12 +25,14 @@ public final class HttpConnectionRequest<S,T> {
 			Map<String,String> queryParameters,
 			RequestMarshaller<S> marshaller,
 			ResponseUnmarshaller<T> unmarshaller,
+			ResponseUnmarshaller<?> errorUnmarshaller,
 			S request) {
 		this.path = path;
 		this.headers = copyMap(headers);
 		this.queryParameters = copyMap(queryParameters);
 		this.marshaller = marshaller;
 		this.unmarshaller = unmarshaller;
+		this.errorUnmarshaller = errorUnmarshaller;
 		this.request = request;
 	}
 	
@@ -70,6 +73,8 @@ public final class HttpConnectionRequest<S,T> {
 		builder.append(marshaller);
 		builder.append(", unmarshaller=");
 		builder.append(unmarshaller);
+		builder.append(", errorUnmarshaller=");
+		builder.append(errorUnmarshaller);
 		builder.append(", request=");
 		builder.append(request);
 		builder.append("]");
@@ -116,6 +121,10 @@ public final class HttpConnectionRequest<S,T> {
 
 	public S getRequest() {
 		return request;
+	}
+
+	public ResponseUnmarshaller<?> getErrorUnmarshaller() {
+		return errorUnmarshaller;
 	}
 			
 }
