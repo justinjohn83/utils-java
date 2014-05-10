@@ -47,4 +47,8 @@ public interface HttpSupport {
     
     HttpSupport setGlobalHeaders(String...keyValuePairs);
     
+    void addBadStatusInterceptor(HttpBadStatusInterceptor i);
+    
+    boolean removeBadStatusInterceptor(HttpBadStatusInterceptor i);
+    
 }

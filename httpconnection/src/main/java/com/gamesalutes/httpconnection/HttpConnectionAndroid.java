@@ -750,7 +750,7 @@ public final class HttpConnectionAndroid extends AbstractHttpConnection
         }
         
         HttpResponse response = getResponse(uri,method);
-        handleExceptions(response,request.getErrorUnmarshaller());
+        handleExceptions(uri,response,request.getErrorUnmarshaller());
         
         // unmarshaller
         return unmarshallResponse(response,request.getUnmarshaller());

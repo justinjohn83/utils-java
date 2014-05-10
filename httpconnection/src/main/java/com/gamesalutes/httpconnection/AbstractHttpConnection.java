@@ -1,9 +1,12 @@
 package com.gamesalutes.httpconnection;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -16,14 +19,48 @@ import com.gamesalutes.utils.MiscUtils;
 
 public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 
-	public AbstractHttpConnection() {
-		// TODO Auto-generated constructor stub
+	private class InterceptorManager implements HttpBadStatusInterceptor {
+
+    	private final Set<HttpBadStatusInterceptor> interceptors = 
+    			new CopyOnWriteArraySet<HttpBadStatusInterceptor>();
+    	
+		public void onHttpException(URI uri, HttpBadStatusException e) {
+			for(HttpBadStatusInterceptor i : interceptors) {
+				try {
+					i.onHttpException(uri, e);
+				}
+				catch(Exception e2) {
+					logger.warn("Interceptor i=" + i + " threw exception on handling uri=" + uri + ";e=" + e,e2);
+				}
+			}
+		}
+		
+		public void addBadStatusInterceptor(HttpBadStatusInterceptor i) {
+			if(i == null) {
+				throw new NullPointerException("i");
+			}
+			interceptors.add(i);
+		}
+		
+		public boolean removeBadStatusInterceptor(HttpBadStatusInterceptor i) {
+			if(i == null) {
+				throw new NullPointerException("i");
+			}
+			
+			return interceptors.remove(i);
+		}
+    	
+    }
+	
+	protected AbstractHttpConnection() {
 	}
 	
     protected final Map<String,String> defaultHeaders = new HashMap<String,String>();
     protected final ReadWriteLock sharedModificationLock = new ReentrantReadWriteLock();
     
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
+    
+    private final InterceptorManager interceptorManager = new InterceptorManager();
 
 	protected final <T> T unmarshallResponse(HttpResponse response,ResponseUnmarshaller<T> unmarshaller) throws IOException {
 		if(unmarshaller == null) {
@@ -40,7 +77,7 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 		}
 	}
 	
-	protected final void handleExceptions(HttpResponse response,ResponseUnmarshaller<?> errorUnmarshaller) throws IOException,HttpBadStatusException {
+	protected final void handleExceptions(URI uri,HttpResponse response,ResponseUnmarshaller<?> errorUnmarshaller) throws IOException,HttpBadStatusException {
 		if(response == null) {
 			throw new IOException("No Response");
 		}
@@ -48,7 +85,7 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 		final int code = response.getCode();
 		
 		if(logger.isDebugEnabled()) {
-			logger.debug("Response code=" + code);
+			logger.debug("uri=" + uri + ";Response code=" + code);
 		}
 		
 		if(code >= 200 && code < 300) {
@@ -97,6 +134,7 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 		}
 		
 		if(ex != null) {
+			this.interceptorManager.onHttpException(uri, ex);
 			throw ex;
 		}
 	}
@@ -163,5 +201,14 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
     	
     	return this;
     }
+
+    
+	public void addBadStatusInterceptor(HttpBadStatusInterceptor i) {
+		interceptorManager.addBadStatusInterceptor(i);
+	}
+
+	public boolean removeBadStatusInterceptor(HttpBadStatusInterceptor i) {
+		return interceptorManager.removeBadStatusInterceptor(i);
+	}
 
 }
