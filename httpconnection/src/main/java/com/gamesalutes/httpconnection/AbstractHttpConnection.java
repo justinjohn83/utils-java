@@ -1,6 +1,12 @@
 package com.gamesalutes.httpconnection;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +20,9 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 		// TODO Auto-generated constructor stub
 	}
 	
+    protected final Map<String,String> defaultHeaders = new HashMap<String,String>();
+    protected final ReadWriteLock sharedModificationLock = new ReentrantReadWriteLock();
+    
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	protected final <T> T unmarshallResponse(HttpResponse response,ResponseUnmarshaller<T> unmarshaller) throws IOException {
@@ -91,5 +100,68 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 			throw ex;
 		}
 	}
+	
+    public HttpSupport addGlobalHeader(String key,String value) {
+    	if(key == null) {
+    		throw new NullPointerException("key");
+    	}
+    	Lock lock = this.sharedModificationLock.writeLock();
+    	lock.lock();
+    	try {
+    		this.defaultHeaders.put(key, value);
+    	}
+    	finally {
+    		lock.unlock();
+    	}
+    	
+    	return this;
+    }
+    
+    public HttpSupport removeGlobalHeader(String key) {
+    	if(key == null) {
+    		throw new NullPointerException("key");
+    	}
+    	Lock lock = this.sharedModificationLock.writeLock();
+    	lock.lock();
+    	try {
+    		this.defaultHeaders.remove(key);
+    	}
+    	finally {
+    		lock.unlock();
+    	}
+    	
+    	return this;
+    }
+    
+    public HttpSupport setGlobalHeaders(String...keyvalues) {
+    	if(keyvalues == null) {
+    		throw new NullPointerException("keyvalues");
+    	}
+    	if(keyvalues.length % 2 != 0) {
+    		throw new IllegalArgumentException("keyvalues=" + Arrays.toString(keyvalues));
+    	}
+    	
+    	Map<String,String> m = new HashMap<String,String>();
+    	for(int i = 0; i < keyvalues.length; i+=2) {
+    		m.put(keyvalues[i], keyvalues[i+1]);
+    	}
+    	
+    	return setGlobalHeaders(m);
+    }
+    public HttpSupport setGlobalHeaders(Map<String,String> headers) {
+    	Lock lock = this.sharedModificationLock.writeLock();
+    	lock.lock();
+    	try {
+    		this.defaultHeaders.clear();
+    		if(!MiscUtils.isEmpty(headers)) {
+    			this.defaultHeaders.putAll(headers);
+    		}
+    	}
+    	finally {
+    		lock.unlock();
+    	}
+    	
+    	return this;
+    }
 
 }

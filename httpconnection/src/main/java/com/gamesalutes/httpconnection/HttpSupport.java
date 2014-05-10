@@ -39,4 +39,12 @@ public interface HttpSupport {
     <S,T> T put(HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException;
     <S,T> T delete(HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException;
     
+    HttpSupport addGlobalHeader(String key,String value);
+    
+    HttpSupport removeGlobalHeader(String key);
+    
+    HttpSupport setGlobalHeaders(Map<String,String> keyValuePairs);
+    
+    HttpSupport setGlobalHeaders(String...keyValuePairs);
+    
 }

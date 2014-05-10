@@ -12,12 +12,14 @@ import java.net.URISyntaxException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
@@ -81,7 +83,6 @@ public final class HttpConnection extends AbstractHttpConnection
     private String relativePath;
     private String username;
     private String password;
-    private Header authenticationHeader;
     
     private AtomicLong totalBytes = new AtomicLong();
     private AtomicInteger openConnections = new AtomicInteger();
@@ -250,7 +251,10 @@ public final class HttpConnection extends AbstractHttpConnection
      *
      * @param username the username
      * @param password the password
+     * 
+     * @deprecated
      */
+    @Deprecated
     public void setCredentials(String username,String password)
     {
         this.username = username;
@@ -564,21 +568,34 @@ public final class HttpConnection extends AbstractHttpConnection
 
     private void setHeaders(HttpRequestBase method,Map<String,String> headers)
     {
-        // set the authentication header if it is present
-        if(authenticationHeader != null)
-            method.setHeader(authenticationHeader);
+    	Map<String,String> allHeaders = new HashMap<String,String>();
+    	
+        // set the default headers
+    	Lock lock = this.sharedModificationLock.readLock();
+    	lock.lock();
+    	try {
+    		allHeaders.putAll(this.defaultHeaders);
+    	}
+    	finally {
+    		lock.unlock();
+    	}
+    	
+    	// add custom headers
+    	if(!MiscUtils.isEmpty(headers)) {
+    		allHeaders.putAll(headers);
+    	}
         
-        if(!MiscUtils.isEmpty(headers))
+        if(!MiscUtils.isEmpty(allHeaders))
         {
-            for(Map.Entry<String,String> E : headers.entrySet() )
+            for(Map.Entry<String,String> E : allHeaders.entrySet() )
             {
                 method.setHeader(E.getKey(),E.getValue());
             }
         }
         // support gzip and defalte compression schemes
+        // TODO: What if added encoding above?
         method.setHeader("Accept-Encoding","gzip, deflate");
     }
-
     private void setFormParams(HttpPost method,Map<String,String> formParams)
     {
 
@@ -615,8 +632,10 @@ public final class HttpConnection extends AbstractHttpConnection
         // do it manually
         // authenticate
         // set the login credentials
+    	final String headerName = "Authorization";
+    	
         if(username == null)
-            authenticationHeader = null;
+            this.removeGlobalHeader(headerName);
         else
         {
             StringBuilder buf = new StringBuilder(128);
@@ -627,7 +646,7 @@ public final class HttpConnection extends AbstractHttpConnection
             MiscUtils.clearStringBuilder(buf);
             buf.append("Basic ").append(creds);
 
-            authenticationHeader = new BasicHeader("Authorization",buf.toString());
+            this.addGlobalHeader(headerName, buf.toString());
         }
     }
 
