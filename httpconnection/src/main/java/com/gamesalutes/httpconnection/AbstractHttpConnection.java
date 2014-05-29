@@ -10,6 +10,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,8 @@ import com.gamesalutes.utils.MiscUtils;
 
 public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 
+	private static final String DEFAULT_URL_REGEX_PATTERN = ".*";
+	
 	private class InterceptorManager implements HttpBadStatusInterceptor {
 
     	private final Set<HttpBadStatusInterceptor> interceptors = 
@@ -55,8 +58,8 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 	protected AbstractHttpConnection() {
 	}
 	
-    protected final Map<String,String> defaultHeaders = new HashMap<String,String>();
-    protected final ReadWriteLock sharedModificationLock = new ReentrantReadWriteLock();
+    private final Map<String,Map<String,String>> defaultHeaders = new HashMap<String,Map<String,String>>();
+    private final ReadWriteLock sharedModificationLock = new ReentrantReadWriteLock();
     
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
     
@@ -139,14 +142,46 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 		}
 	}
 	
-    public HttpSupport addGlobalHeader(String key,String value) {
+	
+	protected Map<String,String> getDefaultHeaders(String url) {
+		Map<String,String> map = new HashMap<String,String>();
+		Lock lock = this.sharedModificationLock.readLock();
+    	lock.lock();
+    	try {
+    		for(Map.Entry<String,Map<String,String>> E : this.defaultHeaders.entrySet())
+    		{
+    			Pattern urlRegex = Pattern.compile(E.getKey());
+    			if(urlRegex.matcher(url).matches())
+    			{
+    				map.putAll(E.getValue());
+    			}
+    		}
+    	}
+    	finally {
+    		lock.unlock();
+    	}
+    	
+    	return map;
+	}
+	
+
+	public HttpSupport addGlobalHeader(String key, String value) {
+		return addGlobalHeader(key,value,DEFAULT_URL_REGEX_PATTERN);
+	}
+	
+    public HttpSupport addGlobalHeader(String key,String value,String urlRegex) {
     	if(key == null) {
     		throw new NullPointerException("key");
     	}
     	Lock lock = this.sharedModificationLock.writeLock();
     	lock.lock();
     	try {
-    		this.defaultHeaders.put(key, value);
+    		Map<String,String> headers = this.defaultHeaders.get(urlRegex);
+    		if(headers == null) {
+    			headers = new HashMap<String,String>();
+    			this.defaultHeaders.put(urlRegex,headers);
+    		}
+    		headers.put(key,value);
     	}
     	finally {
     		lock.unlock();
@@ -186,13 +221,18 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
     	
     	return setGlobalHeaders(m);
     }
-    public HttpSupport setGlobalHeaders(Map<String,String> headers) {
+    public HttpSupport setGlobalHeaders(Map<String,String> globalHeaders) {
     	Lock lock = this.sharedModificationLock.writeLock();
     	lock.lock();
     	try {
     		this.defaultHeaders.clear();
-    		if(!MiscUtils.isEmpty(headers)) {
-    			this.defaultHeaders.putAll(headers);
+    		if(!MiscUtils.isEmpty(globalHeaders)) {
+    			Map<String,String> headers = this.defaultHeaders.get(DEFAULT_URL_REGEX_PATTERN);
+        		if(headers == null) {
+        			headers = new HashMap<String,String>();
+        			this.defaultHeaders.put(DEFAULT_URL_REGEX_PATTERN,headers);
+        		}
+        		headers.putAll(globalHeaders);
     		}
     	}
     	finally {
@@ -210,5 +250,6 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 	public boolean removeBadStatusInterceptor(HttpBadStatusInterceptor i) {
 		return interceptorManager.removeBadStatusInterceptor(i);
 	}
+
 
 }

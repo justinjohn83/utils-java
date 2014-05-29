@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
@@ -567,15 +566,8 @@ public final class HttpConnectionAndroid extends AbstractHttpConnection
     {
     	Map<String,String> allHeaders = new HashMap<String,String>();
     	
-        // set the default headers
-    	Lock lock = this.sharedModificationLock.readLock();
-    	lock.lock();
-    	try {
-    		allHeaders.putAll(this.defaultHeaders);
-    	}
-    	finally {
-    		lock.unlock();
-    	}
+    	 // set the default headers
+    	allHeaders.putAll(this.getDefaultHeaders(method.getURI().toString()));
     	
     	// add custom headers
     	if(!MiscUtils.isEmpty(headers)) {
