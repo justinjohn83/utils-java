@@ -39,11 +39,41 @@ public interface HttpSupport {
     <S,T> T put(HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException;
     <S,T> T delete(HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException;
     
-    
+    /**
+     * Adds a global header key/value pair for all urls.
+     * 
+     * @param key the header key
+     * @param value the header value
+     * @return <code>this</code>
+     */
     HttpSupport addGlobalHeader(String key,String value);
+    
+    /**
+     * Adds a global header key/value pair for urls that match the specified regex.
+     * 
+     * @param key the header key
+     * @param value the header value
+     * @param urlRegex the regular expression pattern to add the global header
+     * @return <code>this</code>
+     */
     HttpSupport addGlobalHeader(String key,String value,String urlRegex);
     
+    /**
+     * Removes the specified global header key for all urls.
+     * 
+     * @param key the header key
+     * @return <code>this</code>
+     */
     HttpSupport removeGlobalHeader(String key);
+    
+    /**
+     * Removes the specified global header key for urls that match the given regex.
+     * 
+     * @param key the header key
+     * @param urlRegex the regular expression to remove for urls
+     * @return <code>this</code>
+     */
+    HttpSupport removeGlobalHeader(String key,String urlRegex);
     
     HttpSupport setGlobalHeaders(Map<String,String> keyValuePairs);
     

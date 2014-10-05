@@ -190,6 +190,26 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
     	return this;
     }
     
+
+	public HttpSupport removeGlobalHeader(String key, String urlRegex) {
+		if(key == null) {
+    		throw new NullPointerException("key");
+    	}
+    	Lock lock = this.sharedModificationLock.writeLock();
+    	lock.lock();
+    	try {
+    		Map<String,String> headerMap = this.defaultHeaders.get(urlRegex);
+    		if(headerMap != null) {
+    			headerMap.remove(key);
+    		}
+    	}
+    	finally {
+    		lock.unlock();
+    	}
+    	
+    	return this;
+	}
+    
     public HttpSupport removeGlobalHeader(String key) {
     	if(key == null) {
     		throw new NullPointerException("key");
@@ -197,7 +217,9 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
     	Lock lock = this.sharedModificationLock.writeLock();
     	lock.lock();
     	try {
-    		this.defaultHeaders.remove(key);
+    		for(Map<String,String> headerMap : this.defaultHeaders.values()) {
+    			headerMap.remove(key);
+    		}
     	}
     	finally {
     		lock.unlock();
@@ -250,6 +272,7 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 	public boolean removeBadStatusInterceptor(HttpBadStatusInterceptor i) {
 		return interceptorManager.removeBadStatusInterceptor(i);
 	}
+
 
 
 }
