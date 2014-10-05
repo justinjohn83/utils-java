@@ -26,7 +26,24 @@
  ******************************************************************************/
 package com.gamesalutes.utils;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileDescriptor;
+import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.Reader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -36,7 +53,21 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.MissingResourceException;
+import java.util.Properties;
+import java.util.Queue;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -70,6 +101,32 @@ public final class FileUtils
              * @param line the current line
              */
             void process(String line);
+        }
+        
+        public static class CharData
+        {
+        	private final char [] buffer;
+        	private final int offset;
+        	private final int length;
+        	
+        	private CharData(char [] buffer, int offset, int length)
+        	{
+        		this.buffer = buffer;
+        		this.offset = offset;
+        		this.length = length;
+        	}
+
+			public char[] getBuffer() {
+				return buffer;
+			}
+
+			public int getOffset() {
+				return offset;
+			}
+
+			public int getLength() {
+				return length;
+			}
         }
 
 
@@ -884,7 +941,8 @@ public final class FileUtils
         public static String readData(InputStream in)
                 throws IOException
         {
-           return new String(readDataChars(in));
+           CharData chars = readDataChars(in);
+           return new String(chars.buffer,chars.offset,chars.length);
 
         }
 
@@ -918,7 +976,7 @@ public final class FileUtils
 	 * @return all the data read from <code>reader</code>
 	 * @throws IOException if error occurs in reading from <code>reader</code>
 	 */
-        public static char [] readDataChars(InputStream in)
+        public static CharData readDataChars(InputStream in)
                 throws IOException
         {
            if(in == null)
@@ -930,13 +988,17 @@ public final class FileUtils
            ByteBuffer bytes = ByteUtils.readBytes(in, null);
            CharBuffer parsed = utf8Decoder.decode(bytes);
 
-           char [] chars;
-           if(parsed.hasArray())
-               chars = parsed.array();
+           CharData chars;
+           // can only return backing array if it is exactly the size of the read input, otherwise a copy is needed
+           if(parsed.hasArray() && !parsed.isReadOnly())
+           {
+        	   chars = new CharData(parsed.array(),parsed.arrayOffset(),parsed.limit());
+           }
            else
            {
-               chars = new char[parsed.limit()];
-               parsed.get(chars);
+               char [] data = new char[parsed.limit()];
+               parsed.get(data);
+               chars = new CharData(data,0,data.length);
            }
 
            return chars;
