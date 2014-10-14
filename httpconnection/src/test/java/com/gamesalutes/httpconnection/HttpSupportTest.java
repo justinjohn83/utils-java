@@ -9,6 +9,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -36,6 +37,20 @@ public abstract class HttpSupportTest {
 		
 		//logger.info("Total Bytes=" + conn.getTotalBytes());
 
+	}
+	
+	@Test(expected=NotAuthenticatedException.class)
+	public void testBuildPathWithSpacesGet() throws Exception {
+		HttpSupport conn = createConnection("http://dev.api.dscvrapp.com:7070");
+		
+		String title = "Lord of the Rings";
+		
+		HttpConnectionRequest<Void,String> request = new RequestBuilder<Void,String>(
+				).setUnmarshaller(new StringResponseUnmarshaller()
+				).setPath("/search/" + title + "?personId=807730").build();
+		String response = conn.get(request);
+		
+		Assert.assertNull(response);
 	}
 	
 	@Test

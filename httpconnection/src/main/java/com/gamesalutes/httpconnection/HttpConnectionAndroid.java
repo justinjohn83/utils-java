@@ -40,7 +40,6 @@ import ch.boye.httpclientandroidlib.client.methods.HttpGet;
 import ch.boye.httpclientandroidlib.client.methods.HttpPost;
 import ch.boye.httpclientandroidlib.client.methods.HttpPut;
 import ch.boye.httpclientandroidlib.client.methods.HttpRequestBase;
-import ch.boye.httpclientandroidlib.client.utils.URIUtils;
 import ch.boye.httpclientandroidlib.client.utils.URLEncodedUtils;
 import ch.boye.httpclientandroidlib.conn.params.ConnRoutePNames;
 import ch.boye.httpclientandroidlib.conn.scheme.Scheme;
@@ -214,7 +213,7 @@ public final class HttpConnectionAndroid extends AbstractHttpConnection
 	        }
 	        catch(URISyntaxException e)
 	        {
-	            throw new IllegalArgumentException("path=" + path);
+	            throw new IllegalArgumentException("path=" + path,e);
 	        }
 	
 	        this.protocol = u.getScheme();
@@ -280,7 +279,7 @@ public final class HttpConnectionAndroid extends AbstractHttpConnection
             }
             catch(URISyntaxException e)
             {
-                throw new IllegalArgumentException("proxy=" + proxy);
+                throw new IllegalArgumentException("proxy=" + proxy,e);
             }
 
             String h = u.getHost();
@@ -462,12 +461,7 @@ public final class HttpConnectionAndroid extends AbstractHttpConnection
     	
     	URI currentUri = null;
     	if(path.startsWith("http")) {
-    		try {
-    			currentUri = new URI(path);
-    		}
-    		catch(URISyntaxException e) {
-    			throw new RuntimeException(e);
-    		}
+    		currentUri = WebUtils.createUri(path);
     	}
     	// no base url specified so if uri is not absolute we cannot determine the url
     	else if(this.server == null) {
@@ -498,22 +492,37 @@ public final class HttpConnectionAndroid extends AbstractHttpConnection
 	    	{
 	    		path = "/" + path;
 	    	}
+	    	
+	    	// strip off raw query
+	    	int queryIndex = path.indexOf('?');
+	    	String query;
+	    	if(queryIndex != -1 && queryIndex < path.length() - 1) {
+	    		query = path.substring(queryIndex + 1);
+	    		path = path.substring(0,queryIndex);
+	    	}
+	    	else {
+	    		query = null;
+	    	}
 	    	try {
-	    		currentUri = URIUtils.createURI(this.protocol,this.server,this.port,path,null,null);
+	    		currentUri = new URI(this.protocol,null,this.server,this.port,path,query,null);
 	    	}
 	    	catch(URISyntaxException e)
 	        {
-	            throw new IllegalArgumentException("path=" + path);
+	            throw new IllegalArgumentException("path=" + path,e);
 	        }
 	    	
+    		Map<String,String> existingQueryParameters = WebUtils.getQueryParameters(currentUri);
+
 	    	// check if query parameters already exist and merge them
 	    	if(!MiscUtils.isEmpty(queryParams)) {
-	    		Map<String,String> existingQueryParameters = WebUtils.getQueryParameters(currentUri);
 	    		if(!MiscUtils.isEmpty(existingQueryParameters)) {
 	    			Map<String,String> newQueryParameters = new LinkedHashMap<String,String>(existingQueryParameters);
 	    			newQueryParameters.putAll(queryParams);
 	    			queryParams = newQueryParameters;
 	    		}
+	    	}
+	    	else if(!MiscUtils.isEmpty(existingQueryParameters)) {
+	    		queryParams = existingQueryParameters;
 	    	}
     	}
 
@@ -521,8 +530,9 @@ public final class HttpConnectionAndroid extends AbstractHttpConnection
         String query = encodeParams(queryParams);
         try
         {
-            return URIUtils.createURI(
+            return new URI(
             		currentUri.getScheme(),
+            		null,
             		currentUri.getHost(),
             		currentUri.getPort(),
             		currentUri.getPath(),
@@ -531,7 +541,7 @@ public final class HttpConnectionAndroid extends AbstractHttpConnection
         }
         catch(URISyntaxException e)
         {
-            throw new IllegalArgumentException("path=" + path);
+            throw new IllegalArgumentException("path=" + path,e);
         }
     }
 

@@ -100,6 +100,9 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 		if(code == 400) {
 			ex = new BadRequestException(response.getStatus());
 		}
+		else if(code == 401) {
+			ex = new NotAuthenticatedException(response.getStatus());
+		}
 		else if(code == 403) {
 			ex = new NotAuthorizedException(response.getStatus());
 		}

@@ -404,7 +404,7 @@ public final class WebUtils
                    }
                    catch(Exception e3)
                    {
-                       throw new IllegalArgumentException("s=" + s);
+                       throw new IllegalArgumentException("s=" + s,e3);
                    }
                 }
             }
