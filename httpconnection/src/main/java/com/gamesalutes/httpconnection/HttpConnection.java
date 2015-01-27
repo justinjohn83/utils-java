@@ -40,15 +40,14 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.utils.URIUtils;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.entity.ContentProducer;
 import org.apache.http.entity.EntityTemplate;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.conn.PoolingClientConnectionManager;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.CoreConnectionPNames;
@@ -660,12 +659,12 @@ public final class HttpConnection extends AbstractHttpConnection
             // if protocol is "https" and the cert is not null
 
     	    // multi-threaded
-    	    PoolingClientConnectionManager connManager = new PoolingClientConnectionManager();
-    	    connManager.setDefaultMaxPerRoute(20);
-    	    connManager.setMaxTotal(20);
-    	    
-            httpClient = //new DecompressingHttpClient(
-            		new DefaultHttpClient(connManager);
+			PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
+			connManager.setDefaultMaxPerRoute(20);
+	    	connManager.setMaxTotal(20);
+	    
+	    	httpClient = //new DecompressingHttpClient(
+        		HttpClients.createMinimal(connManager);
             
 //            if(logger.isDebugEnabled()) {
 //            	httpClient.log.enableDebug(true);

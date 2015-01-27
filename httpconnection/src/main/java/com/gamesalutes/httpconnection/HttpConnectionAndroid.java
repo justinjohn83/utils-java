@@ -27,32 +27,33 @@ import java.util.zip.InflaterInputStream;
 
 import javax.net.ssl.SSLContext;
 
-import ch.boye.httpclientandroidlib.Header;
-import ch.boye.httpclientandroidlib.HttpEntity;
-import ch.boye.httpclientandroidlib.HttpHost;
-import ch.boye.httpclientandroidlib.NameValuePair;
-import ch.boye.httpclientandroidlib.StatusLine;
-import ch.boye.httpclientandroidlib.client.HttpClient;
-import ch.boye.httpclientandroidlib.client.entity.UrlEncodedFormEntity;
-import ch.boye.httpclientandroidlib.client.methods.HttpDelete;
-import ch.boye.httpclientandroidlib.client.methods.HttpEntityEnclosingRequestBase;
-import ch.boye.httpclientandroidlib.client.methods.HttpGet;
-import ch.boye.httpclientandroidlib.client.methods.HttpPost;
-import ch.boye.httpclientandroidlib.client.methods.HttpPut;
-import ch.boye.httpclientandroidlib.client.methods.HttpRequestBase;
-import ch.boye.httpclientandroidlib.client.utils.URLEncodedUtils;
-import ch.boye.httpclientandroidlib.conn.params.ConnRoutePNames;
-import ch.boye.httpclientandroidlib.conn.scheme.Scheme;
-import ch.boye.httpclientandroidlib.conn.ssl.SSLSocketFactory;
-import ch.boye.httpclientandroidlib.entity.ContentProducer;
-import ch.boye.httpclientandroidlib.entity.EntityTemplate;
-import ch.boye.httpclientandroidlib.impl.client.DefaultHttpClient;
-import ch.boye.httpclientandroidlib.impl.conn.PoolingClientConnectionManager;
-import ch.boye.httpclientandroidlib.message.BasicHeader;
-import ch.boye.httpclientandroidlib.message.BasicNameValuePair;
-import ch.boye.httpclientandroidlib.params.CoreConnectionPNames;
-import ch.boye.httpclientandroidlib.protocol.HTTP;
-import ch.boye.httpclientandroidlib.util.EntityUtils;
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
+import org.apache.http.NameValuePair;
+import org.apache.http.StatusLine;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.http.conn.params.ConnRoutePNames;
+import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.conn.ssl.SSLSocketFactory;
+import org.apache.http.entity.ContentProducer;
+import org.apache.http.entity.EntityTemplate;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+//import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.params.CoreConnectionPNames;
+import org.apache.http.protocol.HTTP;
+import org.apache.http.util.EntityUtils;
 
 import com.gamesalutes.utils.ByteCountingInputStream;
 import com.gamesalutes.utils.ChainedIOException;
@@ -60,6 +61,8 @@ import com.gamesalutes.utils.EncryptUtils;
 import com.gamesalutes.utils.EncryptUtils.TransportSecurityProtocol;
 import com.gamesalutes.utils.MiscUtils;
 import com.gamesalutes.utils.WebUtils;
+
+// FIXME: refactor to only duplicate small number of implementation classes that need to be instantiated
 
 public final class HttpConnectionAndroid extends AbstractHttpConnection
 {
@@ -334,7 +337,7 @@ public final class HttpConnectionAndroid extends AbstractHttpConnection
 
     private HttpResponse getResponse(URI uri,HttpRequestBase method) throws IOException
     {
-	        ch.boye.httpclientandroidlib.HttpResponse response;
+	        org.apache.http.HttpResponse response;
 	//        try
 	//        {
 	        	HttpHost httpHost = new HttpHost(uri.getHost(),uri.getPort(),uri.getScheme());
@@ -408,7 +411,7 @@ public final class HttpConnectionAndroid extends AbstractHttpConnection
 	        
     }
     
-    private InputStream getResponseStream(HttpRequestBase method,ch.boye.httpclientandroidlib.HttpResponse response) throws IOException {
+    private InputStream getResponseStream(HttpRequestBase method,org.apache.http.HttpResponse response) throws IOException {
     	// TODO: use DecompressingHttpClient instead of DefaultHttpClient - but will obscure number of bytes read
     	InputStream messageStream = null;
         HttpEntity entity = response.getEntity();
@@ -661,12 +664,12 @@ public final class HttpConnectionAndroid extends AbstractHttpConnection
             // if protocol is "https" and the cert is not null
 
     	    // multi-threaded
-    	    PoolingClientConnectionManager connManager = new PoolingClientConnectionManager();
+    		PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
     	    connManager.setDefaultMaxPerRoute(20);
     	    connManager.setMaxTotal(20);
     	    
             httpClient = //new DecompressingHttpClient(
-            		new DefaultHttpClient(connManager);
+            		HttpClients.createMinimal(connManager);
             
 //            if(logger.isDebugEnabled()) {
 //            	httpClient.log.enableDebug(true);

@@ -8,13 +8,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import ch.boye.httpclientandroidlib.NameValuePair;
-import ch.boye.httpclientandroidlib.client.entity.UrlEncodedFormEntity;
-import ch.boye.httpclientandroidlib.message.BasicNameValuePair;
-import ch.boye.httpclientandroidlib.protocol.HTTP;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HTTP;
 
 import com.gamesalutes.utils.MiscUtils;
 
+@Deprecated
+/**
+ * @deprecated use <code>HttpFormParameterRequestMarshaller</code>
+ * 
+ * @author jmontgomery
+ *
+ */
 public final class HttpAndroidFormParameterRequestMarshaller extends
 		FormParameterRequestMarshaller {
 
