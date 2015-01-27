@@ -33,6 +33,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.NameValuePair;
 import org.apache.http.StatusLine;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
@@ -42,18 +43,22 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.http.config.SocketConfig;
+import org.apache.http.conn.UnsupportedSchemeException;
 import org.apache.http.conn.params.ConnRoutePNames;
-import org.apache.http.conn.scheme.Scheme;
-import org.apache.http.conn.ssl.SSLSocketFactory;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.ContentProducer;
 import org.apache.http.entity.EntityTemplate;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.LaxRedirectStrategy;
+import org.apache.http.impl.conn.DefaultSchemePortResolver;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.protocol.HTTP;
+
 import com.gamesalutes.utils.ByteCountingInputStream;
 import com.gamesalutes.utils.ChainedIOException;
 import com.gamesalutes.utils.EncryptUtils;
@@ -81,7 +86,7 @@ public final class HttpConnection extends AbstractHttpConnection
     private String relativePath;
     private String username;
     private String password;
-    
+    private int numRetries;
     private AtomicLong totalBytes = new AtomicLong();
     private AtomicInteger openConnections = new AtomicInteger();
 
@@ -220,6 +225,7 @@ public final class HttpConnection extends AbstractHttpConnection
 
         this.certFile = certFile;
         this.keyFile = keyFile;
+        this.numRetries = numRetries;
 
         //this.relativePath = u.getPath();
 
@@ -655,8 +661,11 @@ public final class HttpConnection extends AbstractHttpConnection
 			connManager.setDefaultMaxPerRoute(20);
 	    	connManager.setMaxTotal(20);
 	    
-	    	httpClient = //new DecompressingHttpClient(
-        		HttpClients.createMinimal(connManager);
+	    	HttpClientBuilder builder = 
+        		HttpClientBuilder.create()
+        		// allow automatic redirects
+                .setRedirectStrategy(new LaxRedirectStrategy())
+                .setConnectionManager(connManager);
             
 //            if(logger.isDebugEnabled()) {
 //            	httpClient.log.enableDebug(true);
@@ -678,18 +687,55 @@ public final class HttpConnection extends AbstractHttpConnection
                      {
                          key = EncryptUtils.readPrivateKey(new BufferedInputStream(new FileInputStream(this.keyFile)),null,null);
                      }
+                     
                      SSLContext sslContext = EncryptUtils.createSSLContext(TransportSecurityProtocol.SSL, key,certs);
-                     SSLSocketFactory socketFactory = new SSLSocketFactory(sslContext,SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+                     builder.setSSLSocketFactory(new SSLConnectionSocketFactory(
+                    		 sslContext,SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER));
+                     
+     
+                     builder.setSchemePortResolver(new DefaultSchemePortResolver() {
 
-                     Scheme sch = new Scheme("https",port,socketFactory);
-                     httpClient.getConnectionManager().getSchemeRegistry().register(sch);
+						@Override
+						public int resolve(HttpHost host)
+								throws UnsupportedSchemeException {
+							if("https".equalsIgnoreCase(host.getSchemeName()) &&
+									server.equalsIgnoreCase(host.getHostName())) {
+								return port;
+							}
+									
+							return super.resolve(host);
+						}
+                    	 
+                     });
+//                     Scheme sch = new Scheme("https",port,socketFactory);
+//                     httpClient.getConnectionManager().getSchemeRegistry().register(sch);
 
            }
 
             if(this.timeout < 0) this.timeout = 0;
 
-            httpClient.getParams().setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, timeout);
-            httpClient.getParams().setParameter(CoreConnectionPNames.SO_TIMEOUT, timeout);
+            // TODO: Should be setting proxy here too! and not in separate method
+            // This will cause an interface change in this class
+            //builder.setProxy(proxy)
+            RequestConfig requestConfig = RequestConfig.custom()
+            		.setSocketTimeout(timeout)
+            		.setConnectionRequestTimeout(timeout)
+            		.setConnectTimeout(timeout)
+            		.setRedirectsEnabled(true)
+            		.setRelativeRedirectsAllowed(true)
+            		.build();
+            builder.setDefaultRequestConfig(requestConfig);
+            
+            builder.setDefaultSocketConfig(
+            		SocketConfig.custom().setSoTimeout(timeout).build());
+            
+            // TODO: Implement auto retry
+            // TODO: Utilize caching features
+            
+//            httpClient.getParams().setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, timeout);
+//            httpClient.getParams().setParameter(CoreConnectionPNames.SO_TIMEOUT, timeout);
+            
+            httpClient = builder.build();
     }
 
     /**
