@@ -4,7 +4,7 @@
 
   <groupId>com.gamesalutes</groupId>
   <artifactId>httpconnection</artifactId>
-  <version>1.7.5</version>
+  <version>1.8.0</version>
   <packaging>jar</packaging>
 
   <name>httpconnection</name>
@@ -32,12 +32,14 @@
 		<artifactId>commons-codec</artifactId>
 		<version>1.4</version>
 	</dependency> 
+	<!--
 	<dependency>
 		<groupId>org.apache.httpcomponents</groupId>
 		<artifactId>httpclient-android</artifactId>
 		<version>4.3.5.1</version>
-		<scope>compile</scope>
+		<scope>runtime</scope>
 	</dependency>
+	-->
 	<dependency>
 		<groupId>org.apache.httpcomponents</groupId>
 		<artifactId>httpclient</artifactId>
