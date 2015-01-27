@@ -1,6 +1,7 @@
 package com.gamesalutes.httpconnection;
 
 import java.io.BufferedInputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -32,28 +33,27 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.NameValuePair;
 import org.apache.http.StatusLine;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.entity.ContentProducer;
 import org.apache.http.entity.EntityTemplate;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.protocol.HTTP;
-import org.apache.http.util.EntityUtils;
-
 import com.gamesalutes.utils.ByteCountingInputStream;
 import com.gamesalutes.utils.ChainedIOException;
 import com.gamesalutes.utils.EncryptUtils;
@@ -72,7 +72,7 @@ public final class HttpConnection extends AbstractHttpConnection
 //    }
 //    private static final String DATA_PATH = "zport/dmd/Devices";
 
-    private HttpClient httpClient;
+    private CloseableHttpClient httpClient;
     private String protocol;
     private String certFile;
     private String keyFile;
@@ -93,13 +93,11 @@ public final class HttpConnection extends AbstractHttpConnection
     
     private class StreamListener implements ByteCountingInputStream.StreamReadListener {
 
-    	private final HttpEntity entity;
-    	private final HttpRequestBase method;
+    	private final Closeable resource;
     	private long dt;
     	
-    	public StreamListener(HttpEntity entity,HttpRequestBase method) {
-    		this.entity = entity;
-    		this.method = method;
+    	public StreamListener(Closeable resource) {
+    		this.resource = resource;
     	}
 		public void onReadComplete(int readCount) {
 			
@@ -107,14 +105,6 @@ public final class HttpConnection extends AbstractHttpConnection
 				totalBytes.addAndGet(readCount);
 				if(logger.isDebugEnabled()) {
 					logger.debug("Read " + readCount + " bytes from the stream");
-				}
-				try {
-					EntityUtils.consume(entity);
-				}
-				catch(Exception e) {
-					if(logger.isDebugEnabled()) {
-						logger.debug("Error consuming entity",e);
-					}
 				}
 				
 				// record timing of stream read
@@ -127,7 +117,7 @@ public final class HttpConnection extends AbstractHttpConnection
 			}
 			finally {
         	   try {
-        		   method.releaseConnection();
+        		   resource.close();
         	   }
         	   catch(Exception e2) {
         		   // ignore
@@ -332,9 +322,9 @@ public final class HttpConnection extends AbstractHttpConnection
         return getResponse(uri,request);
     }
 
-    private HttpResponse getResponse(URI uri,HttpRequestBase method) throws IOException
+    private HttpResponse getResponse(URI uri,HttpUriRequest method) throws IOException
     {
-	        org.apache.http.HttpResponse response;
+	        CloseableHttpResponse response = null;
 	//        try
 	//        {
 	        	HttpHost httpHost = new HttpHost(uri.getHost(),uri.getPort(),uri.getScheme());
@@ -371,7 +361,7 @@ public final class HttpConnection extends AbstractHttpConnection
 		
 		        try
 		        {
-		        	messageStream = getResponseStream(method,response);
+		        	messageStream = getResponseStream(response);
 		        }
 		        catch(Exception e)
 		        {
@@ -381,7 +371,7 @@ public final class HttpConnection extends AbstractHttpConnection
 		           logger.warn("Unable to retreive content (" + code + " : " + status + ") : " + uri,e);
 	        	   logger.warn("Unable to connect to uri=" + uri,e);
 	        	   try {
-	        		   method.releaseConnection();
+	        		   response.close();
 	        	   }
 	        	   catch(Exception e2) {
 	        		   // ignore
@@ -397,7 +387,9 @@ public final class HttpConnection extends AbstractHttpConnection
 		           }
 	        	   logger.warn("Unable to connect to uri=" + uri,e);
 	        	   try {
-	        		   method.releaseConnection();
+	        		   if(response != null) {
+	        			   response.close();
+	        		   }
 	        	   }
 	        	   catch(Exception e2) {
 	        		   // ignore
@@ -408,7 +400,7 @@ public final class HttpConnection extends AbstractHttpConnection
 	        
     }
     
-    private InputStream getResponseStream(HttpRequestBase method,org.apache.http.HttpResponse response) throws IOException {
+    private InputStream getResponseStream(CloseableHttpResponse response) throws IOException {
     	// TODO: use DecompressingHttpClient instead of DefaultHttpClient - but will obscure number of bytes read
     	InputStream messageStream = null;
         HttpEntity entity = response.getEntity();
@@ -417,7 +409,7 @@ public final class HttpConnection extends AbstractHttpConnection
         	// buffer the raw input
         	InputStream rawStream = 
         			new BufferedInputStream(
-        					new ByteCountingInputStream(entity.getContent(),new StreamListener(entity,method)),4096);
+        					new ByteCountingInputStream(entity.getContent(),new StreamListener(response)),4096);
         	
         	Header header = response.getFirstHeader("Content-Encoding");
         	String value = header != null ? header.getValue() : null;
@@ -571,7 +563,7 @@ public final class HttpConnection extends AbstractHttpConnection
      }
 
 
-    private void setHeaders(HttpRequestBase method,Map<String,String> headers)
+    private void setHeaders(HttpUriRequest method,Map<String,String> headers)
     {
     	Map<String,String> allHeaders = new HashMap<String,String>();
     	
@@ -744,7 +736,7 @@ public final class HttpConnection extends AbstractHttpConnection
 	
 
 	
-	private <S,T> T action(URI uri,HttpRequestBase method,HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException {
+	private <S,T> T action(URI uri,HttpUriRequest method,HttpConnectionRequest<S,T> request) throws IOException,HttpBadStatusException {
         setHeaders(method,request.getHeaders());
         // marshall request
         if(method instanceof HttpEntityEnclosingRequestBase) {
