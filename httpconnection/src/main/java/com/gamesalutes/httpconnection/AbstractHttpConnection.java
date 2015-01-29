@@ -140,7 +140,12 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 		}
 		
 		if(ex != null) {
-			this.interceptorManager.onHttpException(uri, ex);
+			try {
+				this.interceptorManager.onHttpException(uri, ex);
+			}
+			catch(Throwable t) {
+				logger.warn("Error invoking interceptorManager.onHttpException",t);
+			}
 			throw ex;
 		}
 	}
@@ -275,7 +280,4 @@ public abstract class AbstractHttpConnection implements Disposable,HttpSupport {
 	public boolean removeBadStatusInterceptor(HttpBadStatusInterceptor i) {
 		return interceptorManager.removeBadStatusInterceptor(i);
 	}
-
-
-
 }

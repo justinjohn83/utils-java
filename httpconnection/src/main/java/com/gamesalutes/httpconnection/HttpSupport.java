@@ -83,4 +83,14 @@ public interface HttpSupport {
     
     boolean removeBadStatusInterceptor(HttpBadStatusInterceptor i);
     
+    /**
+     * Sets the proxy to use for the client requests.
+     *
+     * @param proxy the proxy url
+     * 
+     * @throws IllegalStateException if web methods have already been invoked
+     */
+    void setProxy(String proxy);
+    
+    
 }

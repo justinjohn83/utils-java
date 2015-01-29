@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -34,7 +33,6 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.NameValuePair;
 import org.apache.http.StatusLine;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -47,10 +45,8 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.config.SocketConfig;
 import org.apache.http.conn.UnsupportedSchemeException;
-import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.entity.ContentProducer;
-import org.apache.http.entity.EntityTemplate;
+import org.apache.http.entity.AbstractHttpEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.LaxRedirectStrategy;
@@ -59,7 +55,6 @@ import org.apache.http.impl.conn.DefaultSchemePortResolver;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.protocol.HTTP;
 
 import com.gamesalutes.utils.ByteCountingInputStream;
@@ -263,13 +258,6 @@ public final class HttpConnection extends AbstractHttpConnection
         setBasicAuthn();
     }
 
-    /**
-     * Sets the proxy to use for the client requests.
-     *
-     * @param proxy the proxy url
-     * 
-     * @throws IllegalStateException if web methods have already been invoked
-     */
     public void setProxy(String proxy)
     {
     	synchronized(configLock) {
@@ -822,7 +810,9 @@ public final class HttpConnection extends AbstractHttpConnection
         setHeaders(method,request.getHeaders());
         // marshall request
         if(method instanceof HttpEntityEnclosingRequestBase) {
-        	marshallRequest((HttpEntityEnclosingRequestBase)method,request.getMarshaller(),request.getRequest());
+        	marshallRequest((HttpEntityEnclosingRequestBase)method,
+        			request.getMarshaller(),
+        			request.getRequest());
         }
         
         HttpResponse response = getResponse(uri,method);
@@ -833,22 +823,14 @@ public final class HttpConnection extends AbstractHttpConnection
         
 	}
 	
-	private <S> void  marshallRequest(HttpEntityEnclosingRequestBase method,final RequestMarshaller<S> marshaller,final S request) {
+	private <S> void  marshallRequest(HttpEntityEnclosingRequestBase method,final RequestMarshaller<S> marshaller,final S request) throws IOException {
 		if(marshaller == null) {
 			throw new IllegalArgumentException("No marshaller configured for entity enclosing request");
 		}
-		EntityTemplate template = new EntityTemplate(new ContentProducer() {
-
-			public void writeTo(OutputStream out) throws IOException {
-				if(logger.isDebugEnabled()) {
-					logger.debug("Marshalling entity content: " + marshaller);
-				}
-				marshaller.marshall(request,out);
-			}
-			
-		});
-		template.setContentType(new BasicHeader(HTTP.CONTENT_TYPE,marshaller.getContentType()));
-		method.setEntity(template);
+		
+		AbstractHttpEntity entity = new MarshallingHttpEntity<S>(marshaller,request);
+		entity.setContentType(new BasicHeader(HTTP.CONTENT_TYPE,marshaller.getContentType()));
+		method.setEntity(entity);
 				
 	}
 
