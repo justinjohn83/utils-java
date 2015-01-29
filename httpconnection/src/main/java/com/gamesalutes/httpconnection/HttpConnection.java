@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
@@ -33,6 +34,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.NameValuePair;
 import org.apache.http.StatusLine;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -52,6 +54,7 @@ import org.apache.http.entity.EntityTemplate;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.LaxRedirectStrategy;
+import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
 import org.apache.http.impl.conn.DefaultSchemePortResolver;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicHeader;
@@ -77,7 +80,10 @@ public final class HttpConnection extends AbstractHttpConnection
 //    }
 //    private static final String DATA_PATH = "zport/dmd/Devices";
 
-    private CloseableHttpClient httpClient;
+    private final AtomicReference<CloseableHttpClient> httpClient = new AtomicReference<CloseableHttpClient>();
+    private final Object configLock = new Object();
+    
+    private HttpClientBuilder clientBuilder;
     private String protocol;
     private String certFile;
     private String keyFile;
@@ -261,32 +267,66 @@ public final class HttpConnection extends AbstractHttpConnection
      * Sets the proxy to use for the client requests.
      *
      * @param proxy the proxy url
+     * 
+     * @throws IllegalStateException if web methods have already been invoked
      */
     public void setProxy(String proxy)
     {
-        HttpHost host = null;
+    	synchronized(configLock) {
+	    	if(httpClient.get() != null) {
+	    		throw new IllegalStateException();
+	    	}
+	    	
+	        HttpHost host = null;
+	
+	        if(proxy != null)
+	        {
+	            host = getAsHost(proxy);
+	        }
+	
+	        DefaultProxyRoutePlanner routePlanner = new DefaultProxyRoutePlanner(host);
+	        this.clientBuilder.setProxy(host);
+	        this.clientBuilder.setRoutePlanner(routePlanner);
+    	}
 
-        if(proxy != null)
+    }
+    
+    private CloseableHttpClient getOrInitHttpClient() {
+    	CloseableHttpClient client = httpClient.get();
+    	if(client == null) {
+    		synchronized(configLock) {
+    			client = httpClient.get();
+    			if(client == null) {
+    				client = clientBuilder.build();
+    				httpClient.set(client);
+    			}
+    		}
+    	}
+    	
+    	return client;
+    }
+
+    
+    private HttpHost getAsHost(String hostInfo) {
+    	if(hostInfo == null) {
+    		throw new NullPointerException("hostInfo");
+    	}
+    	
+    	URI u;
+        try
         {
-            URI u;
-            try
-            {
-                u = new URI(proxy);
-            }
-            catch(URISyntaxException e)
-            {
-                throw new IllegalArgumentException("proxy=" + proxy,e);
-            }
-
-            String h = u.getHost();
-            int port = u.getPort();
-            String scheme = u.getScheme();
-
-            host = new HttpHost(h,port,scheme);
+            u = new URI(hostInfo);
+        }
+        catch(URISyntaxException e)
+        {
+            throw new IllegalArgumentException("hostInfo=" + hostInfo,e);
         }
 
-        httpClient.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, host);
+        String h = u.getHost();
+        int port = u.getPort();
+        String scheme = u.getScheme();
 
+        return new HttpHost(h,port,scheme);
     }
 
     /**
@@ -342,7 +382,7 @@ public final class HttpConnection extends AbstractHttpConnection
 	        
 	        int open = -1;
 	        try {
-	            response = httpClient.execute(httpHost,method);
+	            response = getOrInitHttpClient().execute(httpHost,method);
 	            
 				open = openConnections.incrementAndGet();
 
@@ -729,13 +769,9 @@ public final class HttpConnection extends AbstractHttpConnection
             builder.setDefaultSocketConfig(
             		SocketConfig.custom().setSoTimeout(timeout).build());
             
+            this.clientBuilder = builder;
             // TODO: Implement auto retry
             // TODO: Utilize caching features
-            
-//            httpClient.getParams().setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, timeout);
-//            httpClient.getParams().setParameter(CoreConnectionPNames.SO_TIMEOUT, timeout);
-            
-            httpClient = builder.build();
     }
 
     /**
@@ -744,7 +780,7 @@ public final class HttpConnection extends AbstractHttpConnection
      */
     public void dispose()
     {
-        httpClient.getConnectionManager().shutdown();
+        MiscUtils.closeStream(httpClient.get());
     }
     
     public long getTotalBytes() {
